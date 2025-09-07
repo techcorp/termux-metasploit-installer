@@ -3,7 +3,7 @@
 set -e
 
 # Full Automatic Metasploit Framework Installer for Termux
-# With PostgreSQL auto-start setup
+# With PostgreSQL auto-start setup (Fixed: no ruby-dev)
 
 echo "=================================================="
 echo "   Metasploit Auto Installer for Termux"
@@ -16,7 +16,7 @@ pkg update -y && pkg upgrade -y
 
 # Install required dependencies
 echo "[*] Installing dependencies..."
-pkg install -y wget curl openssh git ncurses-utils ruby ruby-dev make clang python python-pip libffi ncurses openssl libxml2 libxslt postgresql
+pkg install -y wget curl openssh git ncurses-utils ruby make clang python python-pip libffi ncurses openssl libxml2 libxslt postgresql
 
 # Install Python libraries
 echo "[*] Installing Python modules..."
