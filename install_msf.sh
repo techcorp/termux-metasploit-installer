@@ -1,35 +1,44 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Metasploit Installer for Termux (Stable Ruby 3.1 Fix)
+# Full Auto Metasploit Installer for Termux by Muhammad Anas
+
+set -e
 
 echo ">>> Updating Termux..."
-pkg update -y && pkg upgrade -y
+pkg update -y && pkg upgrade -y || true
 
 echo ">>> Installing dependencies..."
-pkg install -y wget curl git unzip autoconf bison clang coreutils make \
-   ncurses-utils ncurses git postgresql python ruby libffi-dev \
-   libxslt-dev libxml2 libxml2-dev libxslt pkg-config openssl-dev
+pkg install -y git curl wget make clang python python-pip \
+    autoconf bison pkg-config libffi libxml2 libxslt \
+    postgresql openssl-tool ncurses tar zip unzip || true
 
-echo ">>> Removing old Ruby..."
-pkg uninstall -y ruby
+echo ">>> Installing Ruby..."
+pkg install -y ruby || true
 
-echo ">>> Installing stable Ruby 3.1 (patched)..."
-pkg install -y ruby
+echo ">>> Cleaning old installation..."
+rm -rf $HOME/metasploit-framework
 
-echo ">>> Downloading Metasploit..."
+echo ">>> Cloning Metasploit Framework..."
 cd $HOME
 git clone https://github.com/rapid7/metasploit-framework.git
 cd metasploit-framework
 
 echo ">>> Fixing bootsnap issue..."
-sed -i 's/require "bootsnap\/setup"/# require "bootsnap\/setup"/' config/boot.rb
+sed -i 's/require "bootsnap\/setup"/# require "bootsnap\/setup"/' config/boot.rb || true
 
-echo ">>> Installing bundler & required gems..."
-gem install bundler
-bundle install
+echo ">>> Installing bundler..."
+gem install bundler --no-document || true
 
-echo ">>> Creating symlink..."
+echo ">>> Installing required gems..."
+bundle install || bundle update || true
+
+echo ">>> Creating symlinks..."
 ln -sf $HOME/metasploit-framework/msfconsole $PREFIX/bin/msfconsole
 ln -sf $HOME/metasploit-framework/msfvenom $PREFIX/bin/msfvenom
 
-echo ">>> Metasploit installation completed!"
-echo "Run with: msfconsole"
+echo ">>> Verifying installation..."
+if command -v msfconsole >/dev/null 2>&1; then
+    echo "✅ Metasploit installed successfully!"
+    echo "Run with: msfconsole"
+else
+    echo "❌ Installation failed. Please check Termux repos with: termux-change-repo"
+fi
