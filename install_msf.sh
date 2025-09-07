@@ -2,83 +2,103 @@
 
 set -e
 
-# Advanced Auto Metasploit Installer for Termux
-# With Interactive Menu
+# Check if dialog is installed
+if ! command -v dialog >/dev/null 2>&1; then
+    pkg install -y dialog
+fi
 
 # Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+GREEN="\e[32m"
+RED="\e[31m"
+YELLOW="\e[33m"
+NC="\e[0m" # No color
 
-# Banner
-banner() {
-    clear
-    echo -e "${CYAN}"
-    echo "=================================================="
-    echo "       Metasploit Auto Installer for Termux       "
-    echo "=================================================="
-    echo -e "${NC}"
-}
-
-# Update & Upgrade
-update_system() {
-    banner
-    echo -e "${YELLOW}[*] Updating Termux packages...${NC}"
-    apt update && apt upgrade -y
-    echo -e "${GREEN}[✓] Packages updated successfully!${NC}"
-    read -p "Press Enter to continue..."
-}
-
-# Install dependencies
-install_deps() {
-    banner
-    echo -e "${YELLOW}[*] Installing dependencies...${NC}"
-    pkg install wget curl openssh git -y
-    pkg install ncurses-utils -y
-    echo -e "${GREEN}[✓] Dependencies installed successfully!${NC}"
-    read -p "Press Enter to continue..."
-}
-
-# Install Metasploit
+# Function: Install Metasploit
 install_msf() {
-    banner
-    echo -e "${YELLOW}[*] Installing Metasploit using Gushmazuko script...${NC}"
-    source <(curl -fsSL https://raw.githubusercontent.com/gushmazuko/metasploit_in_termux/master/metasploit.sh)
-    echo -e "${GREEN}[✓] Metasploit installed successfully!${NC}"
-    read -p "Press Enter to continue..."
+    dialog --infobox "Updating Termux packages..." 4 40
+    apt update && apt upgrade -y >/dev/null 2>&1
+    pkg update -y && pkg upgrade -y >/dev/null 2>&1
+
+    dialog --infobox "Installing dependencies..." 4 40
+    pkg install -y wget curl openssh git ncurses-utils ruby make clang python python-pip libffi ncurses openssl libxml2 libxslt postgresql >/dev/null 2>&1
+
+    pip install requests >/dev/null 2>&1
+
+    if [ ! -d "$PREFIX/var/lib/postgresql" ]; then
+        mkdir -p "$PREFIX/var/lib/postgresql"
+        initdb "$PREFIX/var/lib/postgresql" >/dev/null 2>&1
+    fi
+    pg_ctl -D "$PREFIX/var/lib/postgresql" -l "$PREFIX/var/lib/postgresql/logfile" start >/dev/null 2>&1 || true
+
+    if ! grep -q "pg_ctl -D \$PREFIX/var/lib/postgresql" "$HOME/.bashrc"; then
+        echo "" >> "$HOME/.bashrc"
+        echo "# Auto start PostgreSQL when Termux launches" >> "$HOME/.bashrc"
+        echo "pg_ctl -D \$PREFIX/var/lib/postgresql -l \$PREFIX/var/lib/postgresql/logfile start >/dev/null 2>&1 || true" >> "$HOME/.bashrc"
+    fi
+
+    cd $HOME
+    [ -d "metasploit-framework" ] && rm -rf metasploit-framework
+
+    dialog --infobox "Cloning Metasploit Framework..." 4 40
+    git clone --depth=1 https://github.com/rapid7/metasploit-framework.git >/dev/null 2>&1
+    cd metasploit-framework
+
+    sed -i "s/require 'bootsnap\/setup'/# require 'bootsnap\/setup'/" config/boot.rb
+
+    dialog --infobox "Installing bundler and gems..." 4 40
+    gem install bundler >/dev/null 2>&1
+    bundle install >/dev/null 2>&1 || bundle update >/dev/null 2>&1
+
+    mkdir -p $PREFIX/bin
+    ln -sf $HOME/metasploit-framework/msfconsole $PREFIX/bin/msfconsole
+    ln -sf $HOME/metasploit-framework/msfvenom $PREFIX/bin/msfvenom
+
+    if command -v msfdb >/dev/null 2>&1; then
+        msfdb init >/dev/null 2>&1 || true
+    fi
+
+    dialog --msgbox "Metasploit installation completed successfully!" 7 50
 }
 
-# Run Metasploit
+# Function: Run Metasploit
 run_msf() {
-    banner
-    echo -e "${CYAN}[*] Starting Metasploit...${NC}"
+    clear
+    echo -e "${YELLOW}[*] Launching Metasploit... Press Ctrl+C to exit.${NC}"
     msfconsole
 }
 
-# Menu
-menu() {
-    while true; do
-        banner
-        echo -e "${YELLOW}Choose an option:${NC}"
-        echo "1) Update & Upgrade System"
-        echo "2) Install Dependencies"
-        echo "3) Install Metasploit"
-        echo "4) Run Metasploit"
-        echo "5) Exit"
-        echo ""
-        read -p "Enter your choice [1-5]: " choice
-        case $choice in
-            1) update_system ;;
-            2) install_deps ;;
-            3) install_msf ;;
-            4) run_msf ;;
-            5) echo -e "${RED}Exiting...${NC}"; exit 0 ;;
-            *) echo -e "${RED}Invalid choice, try again!${NC}" ;;
-        esac
-    done
+# Function: Update Metasploit
+update_msf() {
+    dialog --infobox "Updating Metasploit..." 4 40
+    cd $HOME/metasploit-framework && git pull >/dev/null 2>&1
+    bundle install >/dev/null 2>&1
+    dialog --msgbox "Metasploit has been updated!" 6 40
 }
 
-# Start menu
-menu
+# Function: Uninstall Metasploit
+uninstall_msf() {
+    rm -rf $HOME/metasploit-framework
+    rm -f $PREFIX/bin/msfconsole
+    rm -f $PREFIX/bin/msfvenom
+    dialog --msgbox "Metasploit has been removed from your system." 6 50
+}
+
+# Menu Loop
+while true; do
+    CHOICE=$(dialog --clear --stdout \
+        --title "Metasploit Installer - Termux" \
+        --menu "Select an option:" 15 50 6 \
+        1 "Install Metasploit" \
+        2 "Run Metasploit" \
+        3 "Update Metasploit" \
+        4 "Uninstall Metasploit" \
+        5 "Exit")
+
+    case $CHOICE in
+        1) install_msf ;;
+        2) run_msf ;;
+        3) update_msf ;;
+        4) uninstall_msf ;;
+        5) clear; exit 0 ;;
+    esac
+done
