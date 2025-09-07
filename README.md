@@ -1,55 +1,73 @@
-# Metasploit Framework Installer for Termux
+# Metasploit Installer for Termux
 
-This repository provides an installer script to set up **Metasploit Framework** on **Termux (Android)** without running into the common Ruby 3.4 / bootsnap errors.
-
-The script will:
-- Install all required dependencies
-- Install a stable Ruby version (3.1) that works with Metasploit
-- Fix the `bootsnap` issue
-- Install required gems using Bundler
-- Create symlinks for easy access (`msfconsole` and `msfvenom`)
+A simple script to install and run the **Metasploit Framework** on Termux without any manual setup.
+This script automatically installs all dependencies, Ruby, Bundler, and required gems, then sets up Metasploit.
 
 ---
 
-## 📥 Installation
+## ⚡ Features
 
-Clone this repository and run the script:
+* One-click installation
+* Auto-fix for `bootsnap` issue
+* Installs all required gems automatically
+* Creates direct commands: `msfconsole` and `msfvenom`
+
+---
+
+## 🚀 Installation Guide
+
+Open Termux and run the following commands:
 
 ```bash
 pkg update -y && pkg upgrade -y
-pkg install git -y
-git clone https://github.com/<your-username>/metasploit-termux-installer.git
-cd metasploit-termux-installer
+pkg install -y curl git
+
+# Download installer script
+curl -LO https://raw.githubusercontent.com/<your-username>/<your-repo>/main/install_msf.sh
+
+# Give execute permission
 chmod +x install_msf.sh
+
+# Run installer
 ./install_msf.sh
 ```
 
 ---
 
-## ▶️ Usage
+## ▶️ Run Metasploit
 
-After installation, start Metasploit with:
+After successful installation, you can start Metasploit with:
 
 ```bash
 msfconsole
 ```
 
-You can also use `msfvenom` directly for payload generation.
+And use `msfvenom` directly:
+
+```bash
+msfvenom -h
+```
 
 ---
 
-## ⚡ Notes
+## ❗ Troubleshooting
 
-- Keep Termux up to date before running the script.
-- Any existing Ruby installation will be removed and replaced with a fresh one.
-- If you face storage permission issues, run:
+* If you get package not found errors, run:
+
   ```bash
-  termux-setup-storage
+  termux-change-repo
+  ```
+
+  and select **Grimler’s main repo**.
+
+* If gems fail to install, re-run the script:
+
+  ```bash
+  bash install_msf.sh
   ```
 
 ---
 
-## 🔥 Credits
-- [Rapid7 Metasploit Framework](https://github.com/rapid7/metasploit-framework)
-- Script adapted and customized by **Muhammad Anas** for Termux users
+## 👨‍💻 Author
 
+Created by **Muhammad Anas** – Ethical Hacker & Cybersecurity Expert
