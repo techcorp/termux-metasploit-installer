@@ -23,7 +23,7 @@ pkg update -y && pkg upgrade -y
 pkg install -y curl git
 
 # Download installer script
-curl -LO https://raw.githubusercontent.com/<your-username>/<your-repo>/main/install_msf.sh
+curl -LO https://raw.githubusercontent.com/techcorp/termux-metasploit-installer/main/install_msf.sh
 
 # Give execute permission
 chmod +x install_msf.sh
