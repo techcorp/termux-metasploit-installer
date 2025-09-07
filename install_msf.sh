@@ -1,33 +1,29 @@
-# Metasploit Framework Installer for Termux
-# This script installs the latest Metasploit Framework in Termux
+#!/bin/bash
+
+set -e
+
+# Full Automatic Metasploit Framework Installer for Termux
+# With PostgreSQL auto-start setup
 
 echo "=================================================="
-echo "Metasploit Framework Installer for Termux"
+echo "   Metasploit Auto Installer for Termux"
 echo "=================================================="
 
-# Update and upgrade packages
-echo "[*] Updating Termux packages..."
-pkg update -y
-pkg upgrade -y
+# Update and upgrade Termux packages
+echo "[*] Updating packages..."
+apt update && apt upgrade -y
+pkg update -y && pkg upgrade -y
 
-# Install dependencies
-echo "[*] Installing required dependencies..."
-PACKAGES="git curl wget make clang python python-pip libffi ruby ncurses openssl libxml2 libxslt"
+# Install required dependencies
+echo "[*] Installing dependencies..."
+pkg install -y wget curl openssh git ncurses-utils ruby ruby-dev make clang python python-pip libffi ncurses openssl libxml2 libxslt postgresql
 
-for package in $PACKAGES; do
-    echo "[*] Installing $package..."
-    if ! pkg install -y "$package"; then
-        echo "[!] Failed to install $package. Please run 'termux-change-repo' to change repositories."
-        exit 1
-    fi
-done
-
-# Install additional Python packages that might be needed
-echo "[*] Installing Python packages..."
+# Install Python libraries
+echo "[*] Installing Python modules..."
 pip install requests
 
-# Initialize PostgreSQL database
-echo "[*] Setting up PostgreSQL..."
+# Setup PostgreSQL database
+echo "[*] Initializing PostgreSQL..."
 if [ ! -d "$PREFIX/var/lib/postgresql" ]; then
     mkdir -p "$PREFIX/var/lib/postgresql"
     initdb "$PREFIX/var/lib/postgresql"
@@ -37,18 +33,27 @@ fi
 echo "[*] Starting PostgreSQL service..."
 pg_ctl -D "$PREFIX/var/lib/postgresql" -l "$PREFIX/var/lib/postgresql/logfile" start || true
 
-# Clone Metasploit Framework
-echo "[*] Cloning Metasploit Framework..."
-cd "$HOME"
+# Auto-start PostgreSQL on Termux launch
+if ! grep -q "pg_ctl -D \$PREFIX/var/lib/postgresql -l \$PREFIX/var/lib/postgresql/logfile start" "$HOME/.bashrc"; then
+    echo "" >> "$HOME/.bashrc"
+    echo "# Auto start PostgreSQL when Termux launches" >> "$HOME/.bashrc"
+    echo "pg_ctl -D \$PREFIX/var/lib/postgresql -l \$PREFIX/var/lib/postgresql/logfile start >/dev/null 2>&1 || true" >> "$HOME/.bashrc"
+    echo "[*] Added PostgreSQL auto-start to .bashrc"
+fi
+
+# Remove old installation if exists
+cd $HOME
 if [ -d "metasploit-framework" ]; then
-    echo "[*] Metasploit directory exists, removing old installation..."
+    echo "[*] Removing old Metasploit installation..."
     rm -rf metasploit-framework
 fi
 
+# Clone Metasploit
+echo "[*] Cloning Metasploit Framework..."
 git clone https://github.com/rapid7/metasploit-framework.git
 cd metasploit-framework
 
-# Disable bootsnap to avoid compatibility issues
+# Fix bootsnap issue
 echo "[*] Disabling bootsnap..."
 sed -i "s/require 'bootsnap\/setup'/# require 'bootsnap\/setup'/" config/boot.rb
 
@@ -57,34 +62,25 @@ echo "[*] Installing bundler..."
 gem install bundler
 
 # Install gems
-echo "[*] Installing gems (this may take several minutes)..."
+echo "[*] Installing gems (this may take a while)..."
 if ! bundle install; then
-    echo "[*] Bundle install failed, trying bundle update..."
+    echo "[!] Bundle install failed, retrying with bundle update..."
     bundle update
 fi
 
-# Create symlinks for easy access
+# Create symlinks
 echo "[*] Creating symlinks..."
-mkdir -p "$HOME/.local/bin"
-ln -sf "$HOME/metasploit-framework/msfconsole" "$HOME/.local/bin/msfconsole"
-ln -sf "$HOME/metasploit-framework/msfvenom" "$HOME/.local/bin/msfvenom"
-
-# Add to PATH if not already there
-if ! grep -q "$HOME/.local/bin" "$HOME/.bashrc"; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-    echo "[*] Added $HOME/.local/bin to PATH in .bashrc"
-fi
-
-# Source bashrc to update current session
-export PATH="$HOME/.local/bin:$PATH"
+mkdir -p $PREFIX/bin
+ln -sf $HOME/metasploit-framework/msfconsole $PREFIX/bin/msfconsole
+ln -sf $HOME/metasploit-framework/msfvenom $PREFIX/bin/msfvenom
 
 echo "=================================================="
 echo "✓ Metasploit Framework installation completed!"
 echo "=================================================="
 echo ""
 echo "To start using Metasploit:"
-echo "1. Restart Termux or run: source ~/.bashrc"
-echo "2. Run: msfconsole"
+echo "  1. Restart Termux or run: source ~/.bashrc"
+echo "  2. Run: msfconsole"
 echo ""
 echo "Available commands:"
 echo "  - msfconsole (main console)"
@@ -92,5 +88,5 @@ echo "  - msfvenom (payload generator)"
 echo ""
 echo "Installation directory: $HOME/metasploit-framework"
 echo ""
-echo "Note: First run may take longer as it initializes the database."
+echo "Note: PostgreSQL will auto-start whenever you open Termux."
 echo "=================================================="
