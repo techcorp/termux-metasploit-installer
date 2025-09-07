@@ -1,7 +1,3 @@
-#!/bin/bash
-
-set -e
-
 # Metasploit Framework Installer for Termux
 # This script installs the latest Metasploit Framework in Termux
 
@@ -29,6 +25,17 @@ done
 # Install additional Python packages that might be needed
 echo "[*] Installing Python packages..."
 pip install requests
+
+# Initialize PostgreSQL database
+echo "[*] Setting up PostgreSQL..."
+if [ ! -d "$PREFIX/var/lib/postgresql" ]; then
+    mkdir -p "$PREFIX/var/lib/postgresql"
+    initdb "$PREFIX/var/lib/postgresql"
+fi
+
+# Start PostgreSQL service
+echo "[*] Starting PostgreSQL service..."
+pg_ctl -D "$PREFIX/var/lib/postgresql" -l "$PREFIX/var/lib/postgresql/logfile" start || true
 
 # Clone Metasploit Framework
 echo "[*] Cloning Metasploit Framework..."
